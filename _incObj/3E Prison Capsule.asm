@@ -1,0 +1,242 @@
+; ---------------------------------------------------------------------------
+; Object 3E - prison capsule
+; ---------------------------------------------------------------------------
+
+Prison:
+		moveq	#0,d0
+		move.b	obRoutine(a0),d0
+		move.w	Pri_Index(pc,d0.w),d1
+		jsr	Pri_Index(pc,d1.w)
+		out_of_range.s	.delete
+		jmp	(DisplaySprite).l
+
+.delete:
+		jmp	(DeleteObject).l
+; ===========================================================================
+Pri_Index:	dc.w Pri_Main-Pri_Index
+		dc.w Pri_BodyMain-Pri_Index
+		dc.w Pri_Switch-Pri_Index
+		; Only the third Pri_Explosion is used in-game. The first two are
+		; leftover pointers for deleted subtypes of the object, which the
+		; S2NA symbol tables call masincenter and masincenter2.
+		dc.w Pri_Explosion-Pri_Index
+		dc.w Pri_Explosion-Pri_Index
+		dc.w Pri_Explosion-Pri_Index
+		dc.w Pri_Animals-Pri_Index
+		dc.w Pri_EndAct-Pri_Index
+
+pri_origY = objoff_30		; original y-axis position
+
+Pri_Var:	dc.b 2,	64/2, 4, 0	; routine, width, priority, frame
+		dc.b 4,	24/2, 5, 1
+		dc.b 6,	32/2, 4, 3
+		dc.b 8,	32/2, 3, 5
+; ===========================================================================
+
+Pri_Main:	; Routine 0
+		move.l	#Map_Pri,obMap(a0)
+		move.w	#ArtTile_Prison_Capsule,obGfx(a0)
+		move.b	#4,obRender(a0)
+		move.w	obY(a0),pri_origY(a0)
+		moveq	#0,d0
+		move.b	obSubtype(a0),d0
+		lsl.w	#2,d0
+		lea	Pri_Var(pc,d0.w),a1
+		move.b	(a1)+,obRoutine(a0)
+		move.b	(a1)+,obActWid(a0)
+		move.b	(a1)+,obPriority(a0)
+		move.b	(a1)+,obFrame(a0)
+		cmpi.w	#8,d0		; is object type number 02?
+		bne.s	.not02		; if not, branch
+
+		move.b	#6,obColType(a0)
+		move.b	#8,obColProp(a0)
+
+.not02:
+		rts
+; ===========================================================================
+
+Pri_BodyMain:	; Routine 2
+		cmpi.b	#2,(v_bossstatus).w	; has the prison been opened?
+		beq.s	.open			; if yes, branch
+		move.w	#64/2+sonic_solid_width,d1
+		move.w	#48/2,d2
+		move.w	#48/2,d3
+		move.w	obX(a0),d4
+		jmp	(SolidObject).l
+; ===========================================================================
+
+.open:
+		tst.b	ob2ndRout(a0)	; is Sonic standing on the prison?
+		beq.s	.notonprison	; if not, branch
+		clr.b	ob2ndRout(a0)
+		bclr	#3,(v_player+obStatus).w
+		bset	#1,(v_player+obStatus).w
+
+.notonprison:
+		move.b	#2,obFrame(a0)	; use frame number 2 (destroyed prison)
+		rts
+; ===========================================================================
+; Pri_Switched:
+Pri_Switch:	; Routine 4
+		move.w	#24/2+sonic_solid_width,d1
+		move.w	#16/2,d2
+		move.w	#16/2,d3
+		move.w	obX(a0),d4
+		jsr	(SolidObject).l
+		lea	(Ani_Pri).l,a1
+		jsr	(AnimateSprite).l
+		move.w	pri_origY(a0),obY(a0)
+		tst.b	ob2ndRout(a0)	; is Sonic standing on the switch?
+		beq.s	.notonprison2	; if not, branch
+		
+		addq.w	#8,obY(a0)
+		move.b	#$A,obRoutine(a0)
+		move.w	#60,obTimeFrame(a0)	; set time between animal spawns
+		clr.b	(f_timecount).w		; stop time counter
+		move.b	#1,(f_lockscreen).w	; lock Sonic to screen position
+		clr.b	ob2ndRout(a0)
+		bclr	#3,(v_player+obStatus).w
+		bset	#1,(v_player+obStatus).w
+
+.notonprison2:
+		rts
+; ===========================================================================
+
+Pri_Explosion:	; Routine 6, 8, $A
+		moveq	#7,d0
+		and.b	(v_vblank_byte).w,d0
+		bne.s	.noexplosion	; only run code every 8 frames
+
+		jsr	(FindFreeObj).l
+		bne.s	.noexplosion
+		_move.b	#id_Explosion,obID(a1) ; load explosion object
+		move.w	obX(a0),obX(a1)
+		move.w	obY(a0),obY(a1)
+		jsr	(RandomNumber).l
+		moveq	#0,d1
+		move.b	d0,d1
+		lsr.b	#2,d1
+		subi.w	#$20,d1
+		add.w	d1,obX(a1)
+		lsr.w	#8,d0
+		lsr.b	#3,d0
+		add.w	d0,obY(a1)
+
+.noexplosion:
+		subq.w	#1,obTimeFrame(a0)
+		beq.s	.makeanimal
+		rts
+; ===========================================================================
+
+.makeanimal:
+		move.b	#2,(v_bossstatus).w	; set prison as being opened
+		move.b	#$C,obRoutine(a0)	; replace explosions with animals
+		move.b	#6,obFrame(a0)		; 'delete' switch by turning it invisible
+		move.w	#150,obTimeFrame(a0)
+		addi.w	#$20,obY(a0)
+		moveq	#7,d6		; load 8 animals
+		move.w	#$9A,d5
+		moveq	#-$1C,d4
+
+.loop:
+		jsr	(FindFreeObj).l
+		bne.s	.fail
+		_move.b	#id_Animals,obID(a1) ; load animal object
+		move.w	obX(a0),obX(a1)
+		move.w	obY(a0),obY(a1)
+		add.w	d4,obX(a1)
+		addq.w	#7,d4
+		move.w	d5,objoff_36(a1)
+		subq.w	#8,d5
+		dbf	d6,.loop	; repeat 7 more times
+
+.fail:
+		rts
+; ===========================================================================
+
+Pri_Animals:	; Routine $C
+		moveq	#7,d0
+		and.b	(v_vblank_byte).w,d0
+		bne.s	.noanimal	; only run code every 8 frames
+
+		jsr	(FindFreeObj).l
+		bne.s	.noanimal
+		_move.b	#id_Animals,obID(a1) ; load animal object
+		move.w	obX(a0),obX(a1)
+		move.w	obY(a0),obY(a1)
+		jsr	(RandomNumber).l
+		andi.w	#$1F,d0
+		subq.w	#6,d0
+		tst.w	d1
+		bpl.s	.ispositive
+		neg.w	d0
+
+.ispositive:
+		add.w	d0,obX(a1)
+		move.w	#$C,objoff_36(a1)
+
+.noanimal:
+		subq.w	#1,obTimeFrame(a0)
+		bne.s	.wait
+		addq.b	#2,obRoutine(a0)
+	if FixBugs=0
+		; This is a remnant from the prototype, which waited an additional second
+		; (3 seconds here) before the results appeared. The final game instead
+		; checks if all animals have despawned, making this line useless.
+		move.w	#180,obTimeFrame(a0)
+	endif
+
+.wait:
+		rts
+; ===========================================================================
+
+Pri_EndAct:	; Routine $E
+	if FixBugs
+		moveq	#(v_lvlobjend-v_lvlobjspace)/object_size-1,d0
+	else
+		moveq	#(v_objspace_end-(v_objspace+object_size*1))/object_size/2-1,d0	; Nonsensical length, it only covers the first half of object RAM.
+	endif
+		moveq	#id_Animals,d1
+		moveq	#object_size,d2
+	if FixBugs
+		lea	(v_lvlobjspace).w,a1
+	else
+		lea	(v_objspace+object_size*1).w,a1 ; Nonsensical starting point, since dynamic object allocations begin at v_lvlobjspace.
+	endif
+
+.findanimal:
+		cmp.b	obID(a1),d1	; is object $28 (animal) loaded?
+		beq.s	.found		; if yes, branch
+		adda.w	d2,a1		; next object RAM
+		dbf	d0,.findanimal	; repeat $3E times
+		move.b	#1,(f_lockctrl).w	; lock controls
+		clr.w	(v_jpadhold2).w		; clear inputs before locking controls
+
+		lea	(v_player).w,a1		; load Sonic object to a1
+		tst.b	obID(a1)		; has Sonic been deleted (because he entered the giant ring)?
+		beq.s	.BigRing		; if yes, branch
+		btst	#1,obStatus(a1)		; is Sonic still in the air?
+		bne.w	.found			; if yes, wait until he has landed
+
+		moveq	#0,d0			; set d0 to 0
+		move.w	d0,obInertia(a1)	; clear Sonic's ground inertia
+		move.w	d0,obVelX(a1)		; clear Sonic's X-velocity
+		move.b	#1,victorypose(a1)	; set Sonic's victory pose flag
+
+.BigRing:
+		jsr	(GotThroughAct).l
+
+	if FixBugs
+		; Avoid returning to Prison to prevent display-and-delete
+		; and double-delete bugs.
+		addq.l	#4,sp
+	endif
+		jmp	(DeleteObject).l
+
+.found:
+		rts
+; ===========================================================================
+
+		include	"_anim/Prison Capsule.asm"
+Map_Pri:	include	"_maps/Prison Capsule.asm"
