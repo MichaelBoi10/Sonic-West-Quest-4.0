@@ -176,6 +176,7 @@ Sonic_Display:
 ; Obj01_RmvInvin:
 .removeinvincible:
 		move.b	#0,(v_invinc).w				; cancel invincibility
+		move.w    #$78,$30(a0)
 
 ; Obj01_ChkShoes:
 .chkshoes:

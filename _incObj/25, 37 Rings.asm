@@ -355,7 +355,12 @@ RLoss_Bounce:	; Routine 2
 	else
 		blo.s	RLoss_Delete				; if yes, delete ring
 	endif
-		bra.w	DisplaySprite				; display this ring
+		move.b	(v_ani3_time).w,d0
+		btst	#0,d0
+		beq.w	DisplaySprite
+		cmpi.b	#80,d0
+		bhi.w	DisplaySprite
+		rts
 ; ===========================================================================
 
 RLoss_Collect:	; Routine 4

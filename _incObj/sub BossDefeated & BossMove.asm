@@ -30,6 +30,7 @@ BossDefeated:
 		lsr.w	#8,d0 				; shift high byte into low byte
 		lsr.b	#3,d0 				; scale down the random number
 		add.w	d0,obY(a1) 			; apply random y
+		clr.b   ($FFFFFE1E).w   ; stop time counter
 
 	.noExplosion:
 		rts					; return

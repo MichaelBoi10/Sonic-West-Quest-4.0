@@ -40,7 +40,7 @@ ExItem_Main:	; Routine 2 - set directly for non-Badnik objects (e.g. monitors)
 ; ---------------------------------------------------------------------------
 
 ExItem_Animate:	; Routine 4 (2 for Explosion)
-		subq.b	#1,obTimeFrame(a0)		; subtract 1 from frame duration
+		subq.b	#2,obTimeFrame(a0)		; subtract 1 from frame duration
 		bpl.s	.display			; if time remains, branch
 		move.b	#8-1,obTimeFrame(a0)		; reset frame interval to 8 frames
 		addq.b	#1,obFrame(a0)			; advance to next frame
