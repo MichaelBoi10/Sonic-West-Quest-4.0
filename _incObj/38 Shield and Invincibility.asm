@@ -1,111 +1,189 @@
 ; ---------------------------------------------------------------------------
 ; Object 38 - shield and invincibility stars
 ; ---------------------------------------------------------------------------
+Pos_table_index = v_trackpos
+Pos_table = v_tracksonic
+
+InvStarsItem:
+       	moveq   #0,d0
+        move.b  obRoutine(a0),d0
+        move.w  Star_Index(pc,d0.w),d1
+        jmp Star_Index(pc,d1.w)
+; ===========================================================================
+Star_Index:
+  		dc.w Star_Main-Star_Index
+        dc.w Shi_Stars-Star_Index
+; ===========================================================================
+
+Star_Main:   ; Routine 0
+		addq.b  #2,obRoutine(a0)
+		move.l  #Map_Shield,$4(a0)
+		move.b  #4,obRender(a0)
+		move.b  #1,obPriority(a0)
+		move.b  #$10,obActWid(a0)
+		move.w  #$541,obGfx(a0)
+		rts
+; ===========================================================================
+ 
+Shi_Stars:  ; Routine 4
+		tst.b	(v_invinc).w	; does Sonic have invincibility?
+		beq.s	.delete		; if not, branch
+        move.w  (v_trackpos).w,d0 ; get index value for tracking data
+        move.b  obAnim(a0),d1
+        subq.b  #1,d1
+		lsl.b   #3,d1       ; multiply animation number by 8
+		move.b  d1,d2
+		add.b   d1,d1
+		add.b   d2,d1       ; multiply by 3
+		addq.b  #4,d1
+		sub.b   d1,d0
+		move.b  $30(a0),d1
+		sub.b   d1,d0       ; use earlier tracking data to create trail
+		addq.b  #4,d1
+		cmpi.b  #$18,d1
+		bcs.s   .aStar
+		moveq   #0,d1
+ 
+.aStar:
+		move.b  d1,$30(a0)
+		lea (v_tracksonic).w,a1
+		lea (a1,d0.w),a1
+		move.w  (a1)+,obX(a0)
+		move.w  (a1)+,obY(a0)
+		move.b  (v_player+obStatus).w,obStatus(a0)
+ 
+		tst.b   ($FFFFD3C0).w       ; Check for Bonus Stage entry
+		beq.s   .novanish       ; if Sonic is not entering a Bonus Stage, skip
+		rts		 ; return, and don't display invincibility stars
+    .novanish:
+		lea (Ani_Shield).l,a1
+		jsr AnimateSprite
+		bsr.s   Stars_LoadGfx
+		jmp DisplaySprite
+; ===========================================================================
+ 
+.delete:
+		jmp DeleteObject
+ 
+; ---------------------------------------------------------------------------
+; Shield and Stars dynamic pattern loading subroutine
+; ---------------------------------------------------------------------------
+ 
+Stars_LoadGfx:
+        	moveq   #0,d0
+        	move.b  ($FFFFD21A).w,d0    ; load frame number
+        	move.l  #Art_Stars,d6
+            lea (DPLC_Shield).l,a2
+        	add.w   d0,d0
+        	adda.w  (a2,d0.w),a2
+        	moveq   #0,d5
+        	move.b  (a2)+,d5          ; read "number of entries" value
+        	subq.w  #1,d5
+        	bmi.s   StarsDPLC_Return ; if zero, branch
+        	move.w  #$A820,d4
+ 
+StarsPLC_ReadEntry:
+        	moveq   #0,d1
+        	move.b  (a2)+,d1
+        	lsl.w   #8,d1
+        	move.b  (a2)+,d1
+        	move.w  d1,d3
+        	lsr.w   #8,d3
+        	andi.w  #$F0,d3
+        	addi.w  #$10,d3
+        	andi.w  #$FFF,d1
+        	lsl.l   #5,d1
+        	add.l   d6,d1
+        	move.w  d4,d2
+        	add.w   d3,d4
+        	add.w   d3,d4
+        	jsr (QueueDMATransfer).l
+        	dbf d5,ShieldPLC_ReadEntry  ; repeat for number of entries
+ 
+StarsDPLC_Return:
+        	rts
+; ===========================================================================
 
 ShieldItem:
-		moveq	#0,d0
-		move.b	obRoutine(a0),d0
-		move.w	Shi_Index(pc,d0.w),d1
-		jmp	Shi_Index(pc,d1.w)
+       	moveq   #0,d0
+        move.b  obRoutine(a0),d0
+        move.w  Shi_Index(pc,d0.w),d1
+        jmp Shi_Index(pc,d1.w)
 ; ===========================================================================
-Shi_Index:	dc.w Shi_Main-Shi_Index
-		dc.w Shi_Shield-Shi_Index
-		dc.w Shi_Stars-Shi_Index
-
-stars_lag:	equ objoff_30		; lag index before stars update position again
+Shi_Index:
+  		dc.w Shi_Main-Shi_Index
+        dc.w Shi_Shield-Shi_Index
 ; ===========================================================================
-
-Shi_Main:	; Routine 0
-		addq.b	#2,obRoutine(a0)			; advance to Shi_Shield
-		move.l	#Map_Shield,obMap(a0)			; set shield mappings
-		move.b	#4,obRender(a0)				; set playfield-positioning mode
-		move.b	#1,obPriority(a0)			; set sprite priority (above Sonic)
-		move.b	#32/2,obActWid(a0)			; set sprite display width
-
-		tst.b	obAnim(a0)				; is object a shield?
-		bne.s	.stars					; if not, branch
-		move.w	#ArtTile_Shield,obGfx(a0)		; shield-specific art tile
-		rts						; return
-
-	.stars:
-		addq.b	#2,obRoutine(a0)			; advance to Shi_Stars
-		move.w	#ArtTile_Invincibility,obGfx(a0)	; stars-specific art tile
-		rts						; return
+ 
+Shi_Main:   ; Routine 0
+		addq.b  #2,obRoutine(a0)
+		move.l  #Map_Shield,$4(a0)
+		lea (DPLC_Shield).l,a2
+		move.b  #4,obRender(a0)
+		move.b  #1,obPriority(a0)
+		move.b  #$10,obActWid(a0)
+		move.w  #$541,obGfx(a0)
+		tst.b   obAnim(a0)    ; is object a shield?
+		beq.s   .shield     ; if yes, branch
+		addq.b  #2,obRoutine(a0) ; Stars specific code: goto Shi_Stars next
+.shield
+		rts
 ; ===========================================================================
-
-Shi_Shield:	; Routine 2
-		tst.b	(v_invinc).w				; has Sonic gained invincibility after already having a shield?
-		bne.s	.hide					; if yes, hide shield sprite
-		tst.b	(v_shield).w				; has Sonic lost the shield?
-		beq.s	.delete					; if yes, delete it
-
-		move.w	(v_player+obX).w,obX(a0)		; keep copying Sonic's X-position
-		move.w	(v_player+obY).w,obY(a0)		; keep copying Sonic's Y-position
-		move.b	(v_player+obStatus).w,obStatus(a0)	; keep Sonic's status flags for rendering
-		lea	(Ani_Shield).l,a1			; load shield animation script
-		jsr	(AnimateSprite).l			; keep animating shield
-		jmp	(DisplaySprite).l			; display shield sprite
-
-	.hide:
-		rts						; hide shield sprite but don't delete it
-
-	.delete:
-		jmp	(DeleteObject).l			; delete shield object
-; ===========================================================================
-
-Shi_Stars:	; Routine 4
-		tst.b	(v_invinc).w				; has invincibility run out?
-		beq.s	Shi_Start_Delete			; if yes, delete stars object
-
-		move.w	(v_trackpos).w,d0			; get index value for tracking data
-		move.b	obAnim(a0),d1				; get stars animation ID (1-4)
-		subq.b	#1,d1					; make it 0-based
-		bra.s	.trail					; skip over dead code
-
-; ===========================================================================
-; unused older trailing code that makes a much shorter trail
-	; .trail_unused:
-		lsl.b	#4,d1					; multiply animation ID by 16
-		addq.b	#4,d1
-		sub.b	d1,d0
-		move.b	stars_lag(a0),d1
-		sub.b	d1,d0					; use earlier tracking data to create trail
-		addq.b	#4,d1
-		andi.b	#$F,d1
-		move.b	d1,stars_lag(a0)
-		bra.s	.updateStars
-; ===========================================================================
-
-	.trail:
-		lsl.b	#3,d1					; multiply animation ID by 8
-		move.b	d1,d2
-		add.b	d1,d1
-		add.b	d2,d1					; multiply by 3
-		addq.b	#4,d1					; advance to next recorded position array index
-		sub.b	d1,d0					; d0 = base index for animation ID
-
-		; This makes stars effectively only update position every 6 frames to create a small jitter effect
-		move.b	stars_lag(a0),d1			; get previous lag value
-		sub.b	d1,d0					; subtract lag value use earlier tracking data to create trail
-		addq.b	#4,d1					; increment lag value to previous recording array index
-		cmpi.b	#6*4,d1					; has lag value exceeded limit? (=$18)
-		blo.s	.updateLag				; if not, branch
-		moveq	#0,d1					; reset lag value
-	;.a:
-	.updateLag:
-		move.b	d1,stars_lag(a0)			; update lag value for next run
-
-	; .b:
-	.updateStars:
-		lea	(v_tracksonic).w,a1			; load Sonic's recorded position data array (each entry is 4 bytes, a word per X/Y)
-		lea	(a1,d0.w),a1				; go to desired recorded position
-		move.w	(a1)+,obX(a0)				; set new X-position
-		move.w	(a1)+,obY(a0)				; set new Y-position
-		move.b	(v_player+obStatus).w,obStatus(a0)	; keep Sonic's status flags for rendering
-		lea	(Ani_Shield).l,a1			; load stars animation script (bundled with shield animations)
-		jsr	(AnimateSprite).l			; keep animating stars
-		jmp	(DisplaySprite).l			; keep displaying stars
-; ===========================================================================
-
-Shi_Start_Delete:	
-		jmp	(DeleteObject).l			; delete invincibility stars object
+ 
+Shi_Shield: ; Routine 2
+		tst.b	(v_invinc).w	; does Sonic have invincibility?
+		bne.s	.remove		; if yes, branch
+		tst.b	(v_shield).w	; does Sonic have shield?
+		beq.s	.delete		; if not, branch
+        move.w  (v_player+obX).w,obX(a0)
+        move.w  (v_player+obY).w,obY(a0)
+        move.b  (v_player+obStatus).w,obStatus(a0)
+        tst.b   ($FFFFD3C0).w       ; Check for Bonus Stage entry
+        beq.s   .novanish       ; if Sonic is not entering a Bonus Stage, skip
+        rts		 ; return, and don't display shield
+    .novanish:
+        lea (Ani_Shield).l,a1
+	   	jsr AnimateSprite
+        bsr.w   Shield_LoadGfx
+    	jmp DisplaySprite
+    .remove:
+    	rts
+    .delete:
+        jmp DeleteObject
+; =========================================================================== 
+; ---------------------------------------------------------------------------
+; Shield and Stars dynamic pattern loading subroutine
+; --------------------------------------------------------------------------- 
+Shield_LoadGfx:
+            moveq   #0,d0
+        	move.b  ($FFFFD19A).w,d0    ; load frame number
+        	move.l  #Art_Shield,d6
+            lea (DPLC_Shield).l,a2
+        	add.w   d0,d0
+        	adda.w  (a2,d0.w),a2
+        	moveq   #0,d5
+        	move.b  (a2)+,d5          ; read "number of entries" value
+        	subq.w  #1,d5
+        	bmi.s   ShieldDPLC_Return ; if zero, branch
+        	move.w  #$A820,d4
+ 
+ShieldPLC_ReadEntry:
+        	moveq   #0,d1
+        	move.b  (a2)+,d1
+        	lsl.w   #8,d1
+        	move.b  (a2)+,d1
+        	move.w  d1,d3
+        	lsr.w   #8,d3
+        	andi.w  #$F0,d3
+        	addi.w  #$10,d3
+        	andi.w  #$FFF,d1
+        	lsl.l   #5,d1
+        	add.l   d6,d1
+        	move.w  d4,d2
+        	add.w   d3,d4
+        	add.w   d3,d4
+        	jsr (QueueDMATransfer).l
+        	dbf d5,ShieldPLC_ReadEntry  ; repeat for number of entries
+ 
+ShieldDPLC_Return:
+        	rts

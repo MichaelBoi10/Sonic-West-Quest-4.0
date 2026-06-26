@@ -31,6 +31,7 @@ Sonic_Main:	; Routine 0
 		bne.s .fuckoff
 		move.w    #$300,obInertia(a0)
 .fuckoff
+		move.b    #id_InstaShield,$FFFFD180.w    ;  load the insta shield object
 		addq.b	#2,obRoutine(a0)			; set to Sonic_Control
 		move.b	#sonic_height,obHeight(a0)		; set default height
 		move.b	#sonic_width,obWidth(a0)		; set default width
@@ -92,7 +93,7 @@ Sonic_Control:	; Routine 2
 		bsr.w	Sonic_Animate				; run Sonic's animation scripts
 		tst.b	(f_playerctrl).w			; is object interactions ignore flag set?
 		bmi.s	.ignoreobjcoll				; if yes, branch
-		jsr	(ReactToItem).l				; handle object interaction with Sonic
+		jsr	(TouchResponse).l				; handle object interaction with Sonic
 
 ; loc_12CB6:
 .ignoreobjcoll:
@@ -1095,10 +1096,12 @@ Sonic_ChkRoll:
 ; End of function Sonic_Roll
 
 
-; ===========================================================================
 ; ---------------------------------------------------------------------------
 ; Subroutine allowing Sonic to jump
 ; ---------------------------------------------------------------------------
+
+; ||||||||||||||| S U B R O U T I N E |||||||||||||||||||||||||||||||||||||||
+
 
 Sonic_Jump:
 		move.b	(v_jpadpress2).w,d0			; get pressed buttons
@@ -1161,53 +1164,68 @@ Sonic_Jump:
 ; End of function Sonic_Jump
 
 
-; ===========================================================================
+
 ; ---------------------------------------------------------------------------
 ; Subroutine controlling Sonic's jump height/duration
 ; ---------------------------------------------------------------------------
 
+; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
+
+
 Sonic_JumpHeight:
-		tst.b	jumping(a0)				; is Sonic airborne specifically from a jump?
-		beq.s	.capyvel				; if not, just cap Y speed normally
-		move.w	#-$400,d1				; set max jump height
-		btst	#6,obStatus(a0)				; is Sonic underwater?
-		beq.s	.notunderwater				; if not, continue
-		move.w	#-$200,d1				; set underwater jump height
+		tst.b	objoff_3C(a0)
+		beq.s	loc_134C4
+		move.w	#-$400,d1
+		btst	#6,obStatus(a0)
+		beq.s	loc_134AE
+		move.w	#-$200,d1
 
-; loc_134AE:
-.notunderwater:
-		cmp.w	obVelY(a0),d1				; get current y speed
-		ble.s	.return					; is Sonic moving up slower than the cap speed? if yes, branch
-		move.b	(v_jpadhold2).w,d0			; get currently held buttons
-		andi.b	#btnABC,d0				; is A, B or C still held after jumping?
-		bne.s	.return					; if yes, branch
-		move.w	d1,obVelY(a0)				; otherwise, cap Sonic's maximum jump height
+loc_134AE:
+        cmp.w    $12(a0),d1
+        ble.s    Sonic_InstaAndShieldMoves
+        move.b    ($FFFFF602).w,d0
+        andi.b    #$70,d0        ; is A,    B or C pressed?
+        bne.s    locret_134C2    ; if yes, branch
+        move.w    d1,$12(a0)
 
-; locret_134C2:
-.return:
-	if FixBugs=0
-		; This prevents the max Y-vel cap from running while jumping
-		rts						; return
-	endif
+locret_134C2:
+        tst.b    obVelY(a0)        ; is Sonic exactly at the height of his jump?
+		rts
 ; ===========================================================================
 
-; loc_134C4:
-.capyvel:
-		cmpi.w	#-$FC0,obVelY(a0)			; is Sonic moving up just below the maximum screen scroll speed? (-$1000)
-		bge.s	.return2				; if not, branch
-		move.w	#-$FC0,obVelY(a0)			; force Sonic to stay below maximum screen scroll speed
+loc_134C4:
+		cmpi.w	#-$FC0,obVelY(a0)
+		bge.s	locret_134D2
+		move.w	#-$FC0,obVelY(a0)
 
-; locret_134D2:
-.return2:
-	if FixBugs
-		; The above vertical speed cap doesn't account for falling
-		cmpi.w	#$FC0,obVelY(a0)			; is Sonic moving down just below the maximum screen scroll speed? ($1000)
-		ble.s	.return3				; if not, branch
-		move.w	#$FC0,obVelY(a0)			; force Sonic to stay below maximum screen scroll speed
-.return3:
-	endif
-		rts						; return
+locret_134D2:
+		rts
+; ============================================================================
+
+Sonic_InstaAndShieldMoves:
+        tst.b    $2F(a0)
+        bne.w    locret_134D2
+        move.b    ($FFFFF603).w,d0
+        andi.b    #$70,d0
+        beq.w    locret_134D2
+        bclr    #4,obStatus(a0)
+        bra.s    Sonic_InstaShield        ; if not in a super-state, branch
+        move.b    #1,$2F(a0)   
+        rts
+
+Sonic_InstaShield:
+        tst    (v_shield).w    ; does Sonic have an shield?
+        bne.s    locret_134D2                ; if yes, branch
+		move.b    #1,(v_objspace+$180+obAnim).w
+        move.b    #1,$2F(a0)
+        move.w    #sfx_InstaAttack,d0
+        jmp    (PlaySound).l
+
+Shieldrts:
+		rts
 ; End of function Sonic_JumpHeight
+
+
 
 
 ; ===========================================================================
@@ -1734,38 +1752,62 @@ Sonic_FloorRight:
 ; Subroutine to reset Sonic's mode when he lands on the floor
 ; ---------------------------------------------------------------------------
 
+; ---------------------------------------------------------------------------
+; Subroutine to	reset Sonic's mode when he lands on the floor
+; ---------------------------------------------------------------------------
+
+; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
+
+
 Sonic_ResetOnFloor:
-		btst	#4,obStatus(a0)				; is Sonic roll-jumping?
-		beq.s	.notrolljump				; if not, skip
-		nop						; unknown removed code
-		nop						; (some extra feature of the roll-jump lock?)
-		nop						; (we will never know...)
+		btst	#4,obStatus(a0)
+		beq.s	loc_137AE
+		nop	
+		nop	
+		nop	
 
-; loc_137AE:
-.notrolljump:
-		bclr	#5,obStatus(a0)				; clear push flag
-		bclr	#1,obStatus(a0)				; clear in-air flag
-		bclr	#4,obStatus(a0)				; clear roll-jump flag
-	if FixBugs
-		; This line was placed too late into the routine,
-		; occasionally causing Sonic "sliding" on the floor
-		move.b	#id_Walk,obAnim(a0)			; use running/walking animation
-	endif
-		btst	#2,obStatus(a0)				; check if Sonic is in a ball state
-		beq.s	.notball				; if not, skip
-		bclr	#2,obStatus(a0)				; clear ball flag
-		move.b	#sonic_height,obHeight(a0)		; set Sonic's hitbox height to standing
-		move.b	#sonic_width,obWidth(a0)		; set Sonic's hitbox width to standing
-	if FixBugs=0
-		move.b	#id_Walk,obAnim(a0)			; use running/walking animation
-	endif
-		subq.w	#sonic_height-sonic_roll_height,obY(a0)	; raise Sonic up 5 pixels so he's not inside the ground
+loc_137AE:
+		bclr	#5,obStatus(a0)
+		bclr	#1,obStatus(a0)
+	;	btst	#4,obStatus(a0)	; GIO: is bit 4 of Sonic's status set?
+	;	bne.s	.resetanim		; GIO: if yes, reset his animation
+	;	btst	#2,obStatus(a0)
+	;	beq.s	notball
+;	.resetanim:	
+		bclr	#2,obStatus(a0)
+		move.b	#$13,obHeight(a0)
+		clr.b     $2F(a0)
+		move.b	#9,obWidth(a0)
+		move.b	#id_Walk,obAnim(a0) ; use running/walking animation
+		subq.w	#5,obY(a0)
+		tst.b	(f_wtunnelmode).w
+		bne.s	notball
+		cmp.b   #4,obRoutine(a0)
+		beq.s   notball	
+		tst.b	spindash_flag(a0)		; check if Sonic is charging a Spin Dash
+		bne.s	notball			; spin dash takes priority over rolling
+		move.w	obInertia(a0),d0
+		
+	Sonic_CheckRollSpeedCommon:
+		move.b	(v_jpadhold2).w,d0
+		andi.b	#btnL+btnR,d0	; is left/right	being pressed?
+		bne.s	notball		; if yes, branch
+		btst	#bitDn,(v_jpadhold2).w ; is down being pressed?
+		beq.s	notball	; if not, branch
+		move.b  #2,obAnim(a0)  ; set Sonic's animation		
+		addq.w  #5,obY(a0)   ; correct Sonic's Y coordinate
+		move.b	#$E,obHeight(a0) ; correct Sonic's height
+		move.b	#7,obWidth(a0)	; correct Sonic's width	
+		bset    #2,obStatus(a0)  ; set Sonic to rolling
+		beq.s   notball
+		move.w	#sfx_Roll,d0
+		jsr	(PlaySound_Special).l		
 
-; loc_137E4:
-.notball:
+notball:
 		move.b	#0,jumping(a0)				; clear jump flag
 		move.w	#0,(v_itembonus).w			; clear enemy score chain
 		rts						; return
+		
 ; End of function Sonic_ResetOnFloor
 
 

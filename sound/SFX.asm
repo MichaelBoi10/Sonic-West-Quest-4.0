@@ -174,5 +174,5 @@ SoundD2:	include "sound/sfx/SndD2 - Peelout Charge.asm"
 	even
 SoundD3:	include "sound/sfx/SndD3 - Peelout Release.asm"
 	even
-SoundD4:	include "sound/sfx/SndD4 - Peelout Stop.asm"
-	even
+SoundD4:	include "sound/sfx/SndDF - Insta Shield.asm"
+	even	

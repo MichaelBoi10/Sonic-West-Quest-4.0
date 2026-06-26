@@ -76,7 +76,6 @@ ZoneCount = 6
 ; ===========================================================================
 ; Include debugger macros and functions
 	include "ErrorHandler/Debugger.asm"
-
 ; ===========================================================================
 ; Expressing sprite mappings and DPLCs in a portable and human-readable form
 SonicMappingsVer = 1
@@ -1785,7 +1784,7 @@ Tit_LoadText:
 		move.b	#bgm_Title,d0			; set title screen music
 		bsr.w	QueueSound1			; play title screen music
 		move.b	#0,(f_debugmode).w		; disable debug mode (cheat remains active though)
-		move.w	#376,(v_generictimer).w		; run title screen for 376 frames (6 seconds plus some change)
+		move.w	#17*58,(v_generictimer).w		; run title screen for 376 frames (6 seconds plus some change)
 
 	if FixBugs
 		; Fix the Press Start Button text
@@ -3776,6 +3775,7 @@ TryAg_Exit:	; exit end screen and restart the gam
 
 ; >>> Objects on final screen
 	include	"_incObj/8B, 8C Try Again, End Eggman, End Emeralds.asm"
+	include "_IncObj/90 Insta Shield.asm"
 
 
 ; ===========================================================================
@@ -3991,7 +3991,8 @@ Map_LWall:	include	"_maps/Wall of Lava.asm"
 		include	"_incObj/4A Unused - Special Stage Entry.asm"
 		include	"_incObj/08 LZ Water Splash.asm"
 		include	"_anim/Shield and Invincibility.asm"
-Map_Shield:	include	"_maps/Shield and Invincibility.asm"
+		include	"_maps/Shield and Invincibility.asm"
+DPLC_Shield: include	"_maps/Shield and Invincibility DPLC.asm"
 		include	"_anim/Special Stage Entry (Unused).asm"
 Map_Vanish:	include	"_maps/Special Stage Entry (Unused).asm"
 		include	"_anim/Water Splash.asm"
@@ -4147,6 +4148,35 @@ Art_Sonic:	binclude	"artunc/Sonic.unc"	; Sonic
 		even
 Art_SpinDust:	binclude	"artunc/SpinDust.bin"
 		even
+; --------------------------------------------------------------
+
+; Insta-Shield art and mappings
+
+; --------------------------------------------------------------
+
+Map_InstaShield:
+
+    include "_maps\Insta-Shield.asm"    ; Insta-Shield mappings
+
+DPLC_InstaShield:
+
+    include "_maps\Insta-Shield DPLC.asm"    ; Insta-Shield DPLCs
+
+Ani_InstaShield:
+
+        dc.w byte_199EE3-Ani_InstaShield
+
+        dc.w byte_199F13-Ani_InstaShield
+
+byte_199EE3:    dc.b  $1F,   6,    $FF
+
+byte_199F13:    dc.b    0,   0,      1,   2,   3,     4,   5,   6,    6,   6,      6,   6,   6,     6,   7, $FD,    0
+
+    even
+
+ArtUnc_InstaShield:        binclude    "artunc\Insta-Shield.bin"
+
+        even                            ; Insta-Shield uncompressed art
 ; ---------------------------------------------------------------------------
 ; Compressed graphics - various
 ; ---------------------------------------------------------------------------
@@ -4157,9 +4187,9 @@ Nem_SyzSparkle:	binclude	"artnem/Unused - SYZ Sparkles.nem"
 		even
 	endif
 
-Nem_Shield:	binclude	"artnem/Shield.nem"
+Art_Shield:	binclude	"artunc/Shield - Blue.bin"
 		even
-Nem_Stars:	binclude	"artnem/Invincibility Stars.nem"
+Art_Stars:	binclude	"artunc/Invincibility Stars.bin"
 		even
 
 	if Revision=0

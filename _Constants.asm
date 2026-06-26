@@ -191,6 +191,7 @@ obSubtype:	equ $28	; object subtype
 
 ; Object variables used by Sonic
 victorypose:	equ $29	; flag set when Sonic should do his Sonic 3-styled victory pose
+jumpability:	equ $2A	; GIO: jump ability marker. set to 1 by Sonic_Jump (1 byte)
 flashtime:	equ $30	; time between flashes after getting hit (2 bytes)
 invtime:	equ $32	; time left for invincibility (2 bytes)
 shoetime:	equ $34	; time left for speed shoes (2 bytes)

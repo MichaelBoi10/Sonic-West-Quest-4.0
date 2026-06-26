@@ -87,7 +87,7 @@ sfx_Signpost =			SMPS_id(ptr_sndCF)
 sfx_SpinDash = SMPS_id(ptr_sndD1)
 sfx_PeelCharge = SMPS_id(ptr_sndD2)
 sfx_PeelRelease = SMPS_id(ptr_sndD3)
-sfx_PeelStop = SMPS_id(ptr_sndD4)
+sfx_InstaAttack = SMPS_id(ptr_sndD4)
 sfx__End =			SMPS_id(ptr_sndend)-1
 
 ; Special sound effects
