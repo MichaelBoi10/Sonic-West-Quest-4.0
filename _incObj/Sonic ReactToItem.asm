@@ -165,28 +165,33 @@ Touch_Process:
 React_Monitor:
 		tst.w	obVelY(a0)	; is Sonic moving upwards?
 		bpl.s	.movingdown	; if not, branch
-
+	if FixBugs
+		; Fix bumping monitors from below that are already on the ground
+		btst	#1,obStatus(a0)
+		beq.s	.movingdown
+	endif
 		move.w	obY(a0),d0
 		subi.w	#$10,d0
 		cmp.w	obY(a1),d0
 		blo.s	.donothing
+
+.monitorbumped:
 		neg.w	obVelY(a0)	; reverse Sonic's vertical speed
 		move.w	#-$180,obVelY(a1)
 		tst.b	ob2ndRout(a1)
 		bne.s	.donothing
-		addq.b	#4,ob2ndRout(a1) ; advance the monitor's routine counter
-		rts	
+		addq.b	#4,ob2ndRout(a1) ; advance the monitor's routine counter (to make it fall)
+		rts
 ; ===========================================================================
 
 .movingdown:
 		cmpi.b	#id_Roll,obAnim(a0) ; is Sonic rolling/jumping?
-		jmp	.success
-	.success:	
+		bne.s	.donothing
 		neg.w	obVelY(a0)	; reverse Sonic's y-motion
 		addq.b	#2,obRoutine(a1) ; advance the monitor's routine counter
 
-	.donothing:
-		rts	
+.donothing:
+		rts
 ; ===========================================================================
 
 React_Enemy:

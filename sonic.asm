@@ -4458,8 +4458,8 @@ Nem_HSpring:	binclude	"artnem/Spring Horizontal.nem"
 		even
 Nem_VSpring:	binclude	"artnem/Spring Vertical.nem"
 		even
-Nem_SignPost:	binclude	"artnem/Signpost.nem"	; end of level signpost
-		even
+Art_SignPost:    binclude    "artunc\Signpost.bin"    ; Sonic level signpost
+        even
 Nem_Lamp:	binclude	"artnem/Lamppost.nem"
 		even
 Nem_BigFlash:	binclude	"artnem/Giant Ring Flash.nem"

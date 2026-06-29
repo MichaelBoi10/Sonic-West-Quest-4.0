@@ -1,0 +1,14 @@
+TheBlad768 = Sonic 1 Disassembly With Clone Driver v2 and MegaPCM2.1 Combined
+PeanutNoceda = Insta-Shield and Speed Cap, Dynamically Loading Signpost Guide
+Selbi = After Images, Points optimization, Spin Dash, Super-Peel out, Spikes Backside Damage
+AleDrawer2008 = Sonic 3 Victory Animation Tutorial
+Trance = (BETTER) Stock Sega Screen Tutorial
+DeltaW = "Be invulnerable after losing your invincibility status" Guide,
+Speems = "S3K-Esque Act Clear Timing" Guide, CD Esque Explosions
+K. Puffin = Restored Burned Animation Guide
+Flamewing = UltraDMAQueue
+Vladikcomper = MD Debugger and Error Handler
+Mercury = ReadySonic (For Lending Zero's and Flashing Rings)
+deltaConduit = Some Sonic Sprites https://www.spriters-resource.com/custom_edited/sonicthehedgehogcustoms/asset/189245/
+
+

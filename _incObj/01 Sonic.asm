@@ -1769,11 +1769,11 @@ Sonic_ResetOnFloor:
 loc_137AE:
 		bclr	#5,obStatus(a0)
 		bclr	#1,obStatus(a0)
-	;	btst	#4,obStatus(a0)	; GIO: is bit 4 of Sonic's status set?
-	;	bne.s	.resetanim		; GIO: if yes, reset his animation
-	;	btst	#2,obStatus(a0)
-	;	beq.s	notball
-;	.resetanim:	
+		btst	#4,obStatus(a0)	; GIO: is bit 4 of Sonic's status set?
+		bne.s	.resetanim		; GIO: if yes, reset his animation
+		btst	#2,obStatus(a0)
+		beq.s	notball
+	.resetanim:	
 		bclr	#2,obStatus(a0)
 		move.b	#$13,obHeight(a0)
 		clr.b     $2F(a0)
@@ -1789,17 +1789,14 @@ loc_137AE:
 		move.w	obInertia(a0),d0
 		
 	Sonic_CheckRollSpeedCommon:
-		move.b	(v_jpadhold2).w,d0
-		andi.b	#btnL+btnR,d0	; is left/right	being pressed?
-		bne.s	notball		; if yes, branch
-		btst	#bitDn,(v_jpadhold2).w ; is down being pressed?
+		btst	#bitDn,(v_jpadpress2).w ; is down being pressed?
 		beq.s	notball	; if not, branch
 		move.b  #2,obAnim(a0)  ; set Sonic's animation		
 		addq.w  #5,obY(a0)   ; correct Sonic's Y coordinate
 		move.b	#$E,obHeight(a0) ; correct Sonic's height
 		move.b	#7,obWidth(a0)	; correct Sonic's width	
 		bset    #2,obStatus(a0)  ; set Sonic to rolling
-		beq.s   notball
+		bne.s   notball
 		move.w	#sfx_Roll,d0
 		jsr	(PlaySound_Special).l		
 
@@ -1830,7 +1827,9 @@ Sonic_Hurt:	; Routine 4
 		rts						; return
 .nodebug:
 	endif
-
+		subq.b    #2,$24(a0)
+        move.b  #0,$25(a0)
+		move.b    #0,$39(a0)
 		jsr	(SpeedToPos).l				; update Sonic's current position based on his velocities
 		addi.w	#$30,obVelY(a0)				; apply gravity (this is 8 less than the normal gravity of $38)
 		btst	#6,obStatus(a0)				; is Sonic underwater?

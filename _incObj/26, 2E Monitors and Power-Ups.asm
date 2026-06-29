@@ -300,39 +300,27 @@ Pow_ChkShield:
 		cmpi.b	#4,d0				; does monitor contain a shield?
 		bne.s	Pow_ChkInvinc			; if not, branch
 
-		move.b	#1,(v_shield).w			; give Sonic a shield
-		move.b	#id_ShieldItem,(v_shieldobj).w	; load shield object ($38)
-		move.w	#sfx_Shield,d0			; set shield sound effect
-		jmp	(QueueSound2).l			; play it
+		addi.w	#5,(v_rings).w			; add 10 rings to the number of rings you have
+		ori.b	#1,(f_ringcount).w		; update the ring counter
+		cmpi.w	#100,(v_rings).w		; check if you have at least 100 rings now
+		blo.w	Pow_RingSound			; if not, branch
+		bset	#1,(v_lifecount).w		; set 100 rings extra life flag
+		beq.w	ExtraLife			; if it wasn't already set, award an extra life
+		cmpi.w	#200,(v_rings).w		; check if you have at least 200 rings now
+		blo.s	Pow_RingSound			; if not, branch
+		bset	#2,(v_lifecount).w		; set 200 rings extra life flag
+		beq.w	ExtraLife			; if it wasn't already set, award an extra life
 ; ===========================================================================
 
 Pow_ChkInvinc:
 		cmpi.b	#5,d0				; does monitor contain invincibility?
 		bne.s	Pow_ChkRings			; if not, branch
 
-		move.b	#1,(v_invinc).w			; make Sonic invincible
-		move.w	#20*60,(v_player+invtime).w	; set time limit for invincibility to 20 seconds
-
-		move.b	#id_ShieldItem,(v_starsobj1).w	; load 1st stars object
-		move.b	#1,(v_starsobj1+obAnim).w	; set shortest travel delay
-		move.b	#id_ShieldItem,(v_starsobj2).w	; load 2nd stars object
-		move.b	#2,(v_starsobj2+obAnim).w	; set short travel delay
-		move.b	#id_ShieldItem,(v_starsobj3).w	; load 3rd stars object
-		move.b	#3,(v_starsobj3+obAnim).w	; set long travel delay
-		move.b	#id_ShieldItem,(v_starsobj4).w	; load 4th stars object
-		move.b	#4,(v_starsobj4+obAnim).w	; set longest travel delay
-
-		tst.b	(f_lockscreen).w		; is boss mode on?
-		bne.s	Pow_NoMusic			; if yes, don't change music
-	if Revision<>0
-		cmpi.w	#12,(v_air).w			; is Sonic close to drowning? (countdown music playing)
-		bls.s	Pow_NoMusic			; if yes, don't change music
-	endif
-		move.w	#bgm_Invincible,d0		; set invincibility music
-		jmp	(QueueSound1).l			; play it
-
-Pow_NoMusic:
-		rts					; don't play music
+		move.b	#1,(v_shoes).w			; set speed shoes flag (used for reverting when time ran out)
+		move.w	#20*60,(v_player+shoetime).w	; set time limit for speed shoes to 20 seconds
+		move.w	#$300,(v_sonspeedmax).w		; change Sonic's top speed
+		move.w	#$9,(v_sonspeedacc).w		; change Sonic's acceleration
+		move.w	#$40,(v_sonspeeddec).w		; change Sonic's deceleration
 ; ===========================================================================
 
 Pow_ChkRings:
